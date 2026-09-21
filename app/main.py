@@ -1,8 +1,11 @@
+import json
 from dotenv import load_dotenv
 load_dotenv()
 
 from .planner import planner
 from .search import search
+from .analyzer import analyzer
+from .synthesizer import synthesizer
 
 
 
@@ -22,21 +25,48 @@ def main():
 
         print(f"[{i}/{len(plan.questions)}] Searching:")
         print(f"    {question.question}\n")
-
+        # Search
         results = search.invoke({
             "query": question.question
         })
-
-        research_results.append({
+        # Analyze
+        analysis = analyzer.invoke({
             "question": question.question,
-            "results": results,
+            "results":json.dumps(
+                results,
+                indent=2
+            )
+
         })
 
-    print("\nResearch Plan")
-    print("=" * 50)
+        research_results.append({
+            "question":question.question,
+            "findings":analysis.findings
+        })
 
-    for i, question in enumerate(plan.questions, 1):
-        print(f"{i}. {question.question}")
+        print(
+            f"    ✓ Extracted {len(analysis.findings)} findings\n"
+        )
+
+        
+
+    print("\nResearch completed.")
+    print("=" * 60)
+
+    report = synthesizer.invoke({
+        "topic":topic,
+        "findings":json.dumps(
+            research_results,
+            indent=2,
+            default=lambda obj:obj.model_dump()
+        )
+    })
+
+    print("\n" + "=" * 80)
+    print("RESEARCH REPORT")
+    print("=" * 80)
+
+    print(report.content)
 
 
 if __name__ == "__main__":
