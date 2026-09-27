@@ -19,5 +19,19 @@ class Finding(BaseModel):
 class Analysis(BaseModel):
     findings:list[Finding]
 
+class ResearchEvaluation(BaseModel):
+
+    sufficient: bool = Field(
+        description="Whether the current research sufficiently answers the question"
+    )
+
+    reason: str = Field(
+        description="Explain why the research is or is not sufficient"
+    )
+
+    improved_query: str = Field(
+        description="A better search query if the research is insufficient"
+    )
+
 
 
