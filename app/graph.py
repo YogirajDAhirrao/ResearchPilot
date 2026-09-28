@@ -16,6 +16,7 @@ class ResearchState(TypedDict):
     report: str
     research_sufficient:bool
     refined_query:str
+    research_attempts: int
 
 
 def plan_research(state:ResearchState):
@@ -29,6 +30,7 @@ def plan_research(state:ResearchState):
         "questions": questions,
         "current_question_index": 0,
         "research_results": [],
+        "research_attempts":0
     }
 
 
@@ -64,7 +66,8 @@ def research_question(state:ResearchState):
 
     return {
         "research_results": research_results,
-        "current_question_index":index+1
+        "current_question_index":index+1,
+        "research_attempts":1
     }
 
 
@@ -119,10 +122,11 @@ def refine_research(state: ResearchState):
     index = state["current_question_index"] - 1
 
     question = state["questions"][index]
+    attempt = state["research_attempts"]+1
 
     print("\n    Research was insufficient.")
     print(f"    Refining search: {query}\n")
-
+    print(f"    Attempt: {attempt}\n")
     results = search.invoke({
         "query": query
     })
@@ -137,27 +141,51 @@ def refine_research(state: ResearchState):
 
     research_results = state["research_results"].copy()
 
+    # Get existing findings
+    existing_findings = research_results[-1]["findings"]
+
+    # Add new findings
+    existing_findings.extend(
+        analysis.findings
+    )
+
     research_results[-1] = {
         "question": question,
-        "findings": analysis.findings
+        "findings": existing_findings
     }
 
     print(
-        f"    ✓ Extracted {len(analysis.findings)} new findings"
+        f" ✓ Extracted {len(analysis.findings)} new findings"
     )
 
     return {
-        "research_results": research_results
+        "research_results": research_results,
+        "research_attempts": attempt,
     }
 
 
 
 def should_continue(state: ResearchState):
 
+    MAX_ATTEMPTS = 3
+
     if not state["research_sufficient"]:
-        return "refine"
+
+        if state["research_attempts"] < MAX_ATTEMPTS:
+            return "refine"
+
+        print(
+            "\n    ⚠ Maximum research attempts reached."
+        )
+
+        if state["current_question_index"] < len(state["questions"]):
+            return "research"
+
+        return "synthesize"
+
     if state["current_question_index"] < len(state["questions"]):
         return "research"
+
     return "synthesize"
 
 builder = StateGraph(ResearchState)
